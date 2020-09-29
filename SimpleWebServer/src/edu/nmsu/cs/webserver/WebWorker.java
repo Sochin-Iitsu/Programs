@@ -26,6 +26,7 @@ import java.net.Socket;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.nio.file.Files;
 
 public class WebWorker implements Runnable
 {
@@ -34,6 +35,7 @@ public class WebWorker implements Runnable
 	private String address; //handles file address
 	private String err404 = "<html><head></head><body><h1>404 Page Not Found!</h1><p>Sorry, pardner. You should've taken that left turn at Albuquerque.</p></body></html>";
 	private String defDis = "<html><head></head><body><h3>Default Page</h3><p><cs371date></p><p><cs371server></p></body></html>";
+	private String conType = "text/html";
 	
 	/**
 	 * Constructor: must have a valid open socket
@@ -56,7 +58,7 @@ public class WebWorker implements Runnable
 			InputStream is = socket.getInputStream();
 			OutputStream os = socket.getOutputStream();
 			readHTTPRequest(is);
-			writeHTTPHeader(os, "text/html");
+			writeHTTPHeader(os, conType);
 			writeContent(os);
 			os.flush();
 			socket.close();
@@ -84,7 +86,7 @@ public class WebWorker implements Runnable
 					Thread.sleep(1);
 				line = r.readLine();
 				System.err.println("Request line: (" + line + ")");
-				if(line.contains("GET")&&line.contains("html")) address = line;
+				if(line.contains("GET") && line.contains("/res/acc")) address = line;
 				if (line.length() == 0)
 					break;
 			}//end try
@@ -134,12 +136,31 @@ public class WebWorker implements Runnable
 	 **/
 	private void writeContent(OutputStream os) throws Exception
 	{
-		if(address != null) 
-		   os.write(pageFileText(address).getBytes());
+		
+		if(conType.equals("text/html")) {
+		   if(address != null) 
+		      os.write(pageFileText(address).getBytes());
 
-		else 
-			os.write(checkTags(defDis).getBytes());
+		   else 
+			   os.write(checkTags(defDis).getBytes());
 	
+		}//end if
+		
+		else {
+			try {
+			   
+			   InputStream imgS = new FileInputStream(address);
+			   int getByte;
+			   while((getByte = imgS.read()) != -1 )
+			      os.write(getByte);
+			   imgS.close();
+			   
+			}//end try
+			catch(Exception e) {
+				os.write(err404.getBytes());
+			}//end catch
+		}//end else
+		
 	    //revert address for future queries
 		address = null;
 		
@@ -150,12 +171,17 @@ public class WebWorker implements Runnable
 		
 		char directOp;
 		
-		//if adr is longer than default length, get current working directory and append rest of the address
+		address = System.getProperty("user.dir") + "/www" + adr.substring(4,adr.length()-9);
 		
-		address = System.getProperty("user.dir") + adr.substring(4,adr.length()-9);
 		directOp = address.charAt(address.indexOf("SimpleWebServer") - 1);
 		if(directOp == '\\'); //for Windows directories
 			address = address.replace('/', directOp);
+			
+	   try {
+		File target = new File(address);
+		conType = Files.probeContentType(target.toPath());
+	   }
+	   catch(Exception e) {}
 		
 	}//end processAddress
 	
@@ -188,7 +214,7 @@ public class WebWorker implements Runnable
 		String stringA = form.format(currDate);
 		String tagB = "<cs371server>";
 		String stringB = "Darkwater Town Square Server";
-		
+			
 		page = page.replace(tagA, stringA);
 		page = page.replace(tagB, stringB);
 		

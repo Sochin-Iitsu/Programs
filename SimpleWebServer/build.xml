@@ -3,7 +3,11 @@
    <property name="build" location="build"/>   
    <property name="classPath" location="${build}/edu/nmsu/cs/webserver"/>
 
-   <target name="init">
+	<target name="clean">
+	      <delete dir="${build}"/>      
+	   </target>
+	
+	<target name="init">
       <mkdir dir="${build}"/>	   
    </target>
 
@@ -12,11 +16,9 @@
    </target>
 
    <target name="run" depends="compile">
-	   <java classname="edu.nmsu.cs.webserver.WebServer" classpath="${classPath}" fork="true"></java>
+	   <java classname="edu.nmsu.cs.webserver.WebServer" classpath="${classPath}" fork="true" dir="${build}"></java>
    </target>
 
-   <target name="clean">
-      <delete dir="${build}"/>      
-   </target>
+   
 	
 </project>
